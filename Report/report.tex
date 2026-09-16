@@ -136,12 +136,14 @@ and verification.
 \textbf{Hypothesis:} \\
 % State the falsifiable prediction before running anything.
 
-As the size of the vector grows the amount of time required for computation will decrease, however with diminishing returns. 
+The compiler's autovectorization will produce code that runs significantly faster than the serial version. Since the compiler doesn't have the same
+knowledge as my code as I do, I think my SIMD implementation will be at least the same speed as the autovectorized version or a bit faster.
 
 \textbf{Reasoning:} \\
 % Why do you expect this outcome? Reference architecture, prior results, theory.
-Larger vector width means that we can process more data in a single instruction. However, more data may have to be loaded from memory
-on larger vectors causing more pipeline stalls and latency as data comes from outside the CPU cache.
+The compiler will target the largest vectors that are available on my CPU since it will be provided with the \texttt{-march=native} compiler flag.
+Although my kernels are fairly simple vector operations, since I have better knowledge of my data layout, I think that my handwritten vectoriziation
+will perform better than the compiler's vectoriziation.
 
 \textbf{Predicted quantitative outcome:} \\
 \begin{center}
@@ -149,11 +151,11 @@ on larger vectors causing more pipeline stalls and latency as data comes from ou
 \label{tab:hypothesis-simd}
 \begin{tabular}{lccc}
 \toprule
-\textbf{Vector ISA (bits)} & \textbf{Vector Size Increase} & \textbf{FP32 Speedup} & \textbf{FP64 Speedup} \\
+\textbf{Vectoriziation Strategy} & \textbf{FP32 Speedup from Serial} & \textbf{FP64 Speedup from Serial} \\
 \midrule
-SSE2 (128)     & 4$\times$ (FP32) / 2$\times$ (FP64)  & $\sim$3.3$\times$ & $\sim$1.8$\times$ \\
-AVX2 (256)     & 8$\times$ (FP32) / 4$\times$ (FP64)  & $\sim$6.4$\times$ & $\sim$3.2$\times$ \\
-AVX-512 (512)  & 16$\times$ (FP32) / 8$\times$ (FP64) & $\sim$12$\times$  & $\sim$5.6$\times$ \\
+Serial & $1x$ & $1x$ \\
+Compiler Autovectorization & $10.5x$ & $5.2x$ \\
+Handwritten Vectoriziation & $11x$ & $5.6x$ \\
 \bottomrule
 \end{tabular}
 \end{center}
@@ -163,7 +165,7 @@ AVX-512 (512)  & 16$\times$ (FP32) / 8$\times$ (FP64) & $\sim$12$\times$  & $\si
 \textbf{Hypothesis:} \\
 % State the falsifiable prediction before running anything.
 
-Shifting the memory alignment off of the 4 Byte or 8 Byte boundary will significantly affect the performance of the SIMD instructions. 
+Shifting the memory alignment off of the 64 Byte alignment that is preferred by AVX512 will significantly affect the performance of the SIMD instructions. 
 The instructions will likely still run, however they will not run efficiently and may even be slower than the scalar counterpart.
 
 \textbf{Reasoning:} \\
@@ -229,7 +231,7 @@ Check & Expected & Observed \\
 \begin{itemize}[leftmargin=1.5em]
     \item \textbf{Hardware:} CPU: x86\_64 AMD Ryzen AI 7 350 w/ Radeon 860M (SIMD Support: SSE, SSE2, AVX, AVX2, AVX-512), Memory: 32GB LPDDR5 @ 5600MT/s
     \item \textbf{OS / Kernel:} Pop\_OS! 24.04 Running Linux 7.0.11-76070011-generic
-    \item \textbf{Compiler \& Flags:} GCC 16.2 compiling with -O2 so that I can control autovectorization.
+    \item \textbf{Compiler \& Flags:} GCC 16.2.0, Flags: -O2 -march=native -ftree-vectorize (disabled for serial experiments)
     \item \textbf{Isolation techniques:} Ran on CPU0 with 100\% affinity, and -20 niceness (ensure no context switching)
     \item \textbf{Trials per condition:} 5 trials per condition
     \item \textbf{Timer / Instrumentation:} clock\_gettime(CLOCK\_MONOTONIC)
