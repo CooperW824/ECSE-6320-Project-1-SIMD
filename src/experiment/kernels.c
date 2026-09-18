@@ -8,7 +8,6 @@
 
 #define AVX512_VECTOR_SIZE_BYTES 64
 
-#define VECTOR
 #ifdef VECTOR
 void kernels_SaxpyF32(float *a, float *x, float *y, uint32_t len,
                       uint8_t stride) {
@@ -313,8 +312,8 @@ void kernels_ThreeStencilF64(double *x, double *y, double a, double b, double c,
   __m512d b_vec = _mm512_set1_pd(b);
   __m512d c_vec = _mm512_set1_pd(c);
 
-  __m256 lanes = _mm256_setr_epi32(0, 1, 2, 3, 4, 5, 6, 7);
-  __m256 indices = _mm256_mullo_epi32(lanes, _mm256_set1_epi32(stride));
+  __m256i lanes = _mm256_setr_epi32(0, 1, 2, 3, 4, 5, 6, 7);
+  __m256i indices = _mm256_mullo_epi32(lanes, _mm256_set1_epi32(stride));
 
   uint32_t i = 1;
   for (; i <= len - VEC_LEN - 1; i += VEC_LEN) {

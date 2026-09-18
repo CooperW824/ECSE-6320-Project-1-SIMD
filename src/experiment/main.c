@@ -189,11 +189,13 @@ int main(int argc, char **argv) {
   if (data_size == 4) {
     ret_val = run_experiments_as_floats(
         (float *)a_data_ptr, (float *)x_data_ptr, (float *)y_data_ptr,
-        stencil_a_f, stencil_b_f, stencil_c_f, stride, output_dir);
+        num_elements, stencil_a_f, stencil_b_f, stencil_c_f, stride,
+        data_offset, argv[0], output_dir);
   } else {
     ret_val = run_experiments_as_doubles(
         (double *)a_data_ptr, (double *)x_data_ptr, (double *)y_data_ptr,
-        stencil_a_d, stencil_b_d, stencil_c_d, stride, output_dir);
+        num_elements, stencil_a_d, stencil_b_d, stencil_c_d, stride,
+        data_offset, argv[0], output_dir);
   }
 
   free(raw_a_data);
