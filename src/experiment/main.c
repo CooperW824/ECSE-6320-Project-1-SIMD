@@ -29,13 +29,17 @@ void format_input_data(const char *input, char *output, uint32_t num_elements,
                        uint8_t stride);
 
 uint8_t run_experiments_as_floats(float *a_data, float *x_data, float *y_data,
-                                  float stencil_a, float stencil_b,
-                                  float stencil_c, uint8_t stride,
-                                  char *output_dir);
+                                  uint32_t len, float stencil_a,
+                                  float stencil_b, float stencil_c,
+                                  uint8_t stride, uint8_t offset,
+                                  char *program_name, char *output_dir);
+
 uint8_t run_experiments_as_doubles(double *a_data, double *x_data,
-                                   double *y_data, double stencil_a,
-                                   double stencil_b, double stencil_c,
-                                   uint8_t stride, char *output_dir);
+                                   double *y_data, uint32_t len,
+                                   double stencil_a, double stencil_b,
+                                   double stencil_c, uint8_t stride,
+                                   uint8_t offset, char *program_name,
+                                   char *output_dir);
 
 int main(int argc, char **argv) {
   if (argc < 10 || argc > 12) {
@@ -229,11 +233,96 @@ void format_input_data(const char *input, char *output, uint32_t num_elements,
 }
 
 uint8_t run_experiments_as_floats(float *a_data, float *x_data, float *y_data,
-                                  float stencil_a, float stencil_b,
-                                  float stencil_c, uint8_t stride,
-                                  char *output_dir) {}
+                                  uint32_t len, float stencil_a,
+                                  float stencil_b, float stencil_c,
+                                  uint8_t stride, uint8_t offset,
+                                  char *program_name, char *output_dir) {
+  char output_filename[4096];
+  sprintf(output_filename, "%s/saxpy_output.floatdata", output_dir);
+  FILE *saxpy_output = fopen(output_filename, "w");
+  perf_Timer SAXPY_timer;
+  perf_StartTimer(&SAXPY_timer);
+  kernels_SaxpyF32(a_data, x_data, y_data, len, stride);
+  perf_EndTimer(&SAXPY_timer);
+  fwrite(y_data, len * stride, sizeof(float), saxpy_output);
+  fclose(saxpy_output);
+
+  sprintf(output_filename, "%s/multiplication_output.floatdata", output_dir);
+  FILE *multiplication_output = fopen(output_filename, "w");
+  perf_Timer multiplication_timer;
+  perf_StartTimer(&multiplication_timer);
+  kernels_MultiplyF32(a_data, x_data, y_data, len, stride);
+  perf_EndTimer(&multiplication_timer);
+  fwrite(y_data, len * stride, sizeof(float), multiplication_output);
+  fclose(multiplication_output);
+
+  sprintf(output_filename, "%s/stencil_output.floatdata", output_dir);
+  FILE *stencil_output = fopen(output_filename, "w");
+  perf_Timer stencil_timer;
+  perf_StartTimer(&stencil_timer);
+  kernels_ThreeStencilF32(x_data, y_data, stencil_a, stencil_b, stencil_c, len,
+                          stride);
+  perf_EndTimer(&stencil_timer);
+  fwrite(y_data, len * stride, sizeof(float), stencil_output);
+  fclose(stencil_output);
+
+  float saxpy_execution = ((float)perf_ComputeNSecDelta(&SAXPY_timer)) / 1e6;
+  float multiplication_execution =
+      ((float)perf_ComputeNSecDelta(&multiplication_timer)) / 1e6;
+  float stencil_execution =
+      ((float)perf_ComputeNSecDelta(&stencil_timer)) / 1e6;
+
+  printf("%d, %d, %d, %s, %s, %f, %f, %f", len, stride, offset, "float",
+         program_name, saxpy_execution, multiplication_execution,
+         saxpy_execution);
+
+  return 0;
+}
 
 uint8_t run_experiments_as_doubles(double *a_data, double *x_data,
-                                   double *y_data, double stencil_a,
-                                   double stencil_b, double stencil_c,
-                                   uint8_t stride, char *output_dir) {}
+                                   double *y_data, uint32_t len,
+                                   double stencil_a, double stencil_b,
+                                   double stencil_c, uint8_t stride,
+                                   uint8_t offset, char *program_name,
+                                   char *output_dir) {
+  char output_filename[4096];
+  sprintf(output_filename, "%s/saxpy_output.floatdata", output_dir);
+  FILE *saxpy_output = fopen(output_filename, "w");
+  perf_Timer SAXPY_timer;
+  perf_StartTimer(&SAXPY_timer);
+  kernels_SaxpyF64(a_data, x_data, y_data, len, stride);
+  perf_EndTimer(&SAXPY_timer);
+  fwrite(y_data, len * stride, sizeof(double), saxpy_output);
+  fclose(saxpy_output);
+
+  sprintf(output_filename, "%s/multiplication_output.floatdata", output_dir);
+  FILE *multiplication_output = fopen(output_filename, "w");
+  perf_Timer multiplication_timer;
+  perf_StartTimer(&multiplication_timer);
+  kernels_MultiplyF64(a_data, x_data, y_data, len, stride);
+  perf_EndTimer(&multiplication_timer);
+  fwrite(y_data, len * stride, sizeof(double), multiplication_output);
+  fclose(multiplication_output);
+
+  sprintf(output_filename, "%s/stencil_output.floatdata", output_dir);
+  FILE *stencil_output = fopen(output_filename, "w");
+  perf_Timer stencil_timer;
+  perf_StartTimer(&stencil_timer);
+  kernels_ThreeStencilF64(x_data, y_data, stencil_a, stencil_b, stencil_c, len,
+                          stride);
+  perf_EndTimer(&stencil_timer);
+  fwrite(y_data, len * stride, sizeof(double), stencil_output);
+  fclose(stencil_output);
+
+  float saxpy_execution = ((float)perf_ComputeNSecDelta(&SAXPY_timer)) / 1e6;
+  float multiplication_execution =
+      ((float)perf_ComputeNSecDelta(&multiplication_timer)) / 1e6;
+  float stencil_execution =
+      ((float)perf_ComputeNSecDelta(&stencil_timer)) / 1e6;
+
+  printf("%d, %d, %d, %s, %s, %f, %f, %f", len, stride, offset, "float",
+         program_name, saxpy_execution, multiplication_execution,
+         saxpy_execution);
+
+  return 0;
+}
