@@ -33,9 +33,9 @@ static const FileSpec kFiles[] = {
 };
 #define NUM_FILES (sizeof(kFiles) / sizeof(kFiles[0]))
 
-/* Uniform random double in [-1.0, 1.0) */
+/* Uniform random double in [-10.0, 10.0) */
 static double rand_unit(void) {
-    return ((double)rand() / ((double)RAND_MAX + 1.0)) * 2.0 - 1.0;
+    return ((double)rand() / ((double)RAND_MAX + 1.0)) * 20.0 - 10.0;
 }
 
 static int write_file(const char *outdir, const FileSpec *spec, size_t n) {

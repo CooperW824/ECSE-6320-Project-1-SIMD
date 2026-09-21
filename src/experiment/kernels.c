@@ -415,7 +415,7 @@ void kernels_ThreeStencilF32(float *x, float *y, float a, float b, float c,
   y[len - 1] = 0.0f;
   for (uint32_t i = 1; i < len - 1; i++) {
     y[i * stride] =
-        a * x[(i - 1 * stride)] + b * x[i * stride] + c * x[(i + 1) * stride];
+        a * x[(i - 1) * stride] + b * x[i * stride] + c * x[(i + 1) * stride];
   }
 }
 void kernels_ThreeStencilF64(double *x, double *y, double a, double b, double c,

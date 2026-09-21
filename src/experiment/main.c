@@ -161,13 +161,13 @@ int main(int argc, char **argv) {
     perror("Read the wrong number of items from the A data file");
   }
 
-  items_read = fread(raw_a_data, data_size, num_elements, x_file);
+  items_read = fread(raw_x_data, data_size, num_elements, x_file);
 
   if (items_read != num_elements) {
     perror("Read the wrong number of items from the X data file");
   }
 
-  items_read = fread(raw_a_data, data_size, num_elements, y_file);
+  items_read = fread(raw_y_data, data_size, num_elements, y_file);
 
   if (items_read != num_elements) {
     perror("Read the wrong number of items from the Y data file");
@@ -181,8 +181,8 @@ int main(int argc, char **argv) {
                     data_offset, stride);
 
   char *a_data_ptr = formatted_a_data + data_offset;
-  char *x_data_ptr = formatted_a_data + data_offset;
-  char *y_data_ptr = formatted_a_data + data_offset;
+  char *x_data_ptr = formatted_x_data + data_offset;
+  char *y_data_ptr = formatted_y_data + data_offset;
 
   uint8_t ret_val;
 
@@ -242,6 +242,12 @@ uint8_t run_experiments_as_floats(float *a_data, float *x_data, float *y_data,
   char output_filename[4096];
   sprintf(output_filename, "%s/saxpy_output.floatdata", output_dir);
   FILE *saxpy_output = fopen(output_filename, "w");
+
+  if (saxpy_output == NULL) {
+    perror("Issue opening SAXPY output file:");
+    return 1;
+  }
+
   perf_Timer SAXPY_timer;
   perf_StartTimer(&SAXPY_timer);
   kernels_SaxpyF32(a_data, x_data, y_data, len, stride);
@@ -274,7 +280,7 @@ uint8_t run_experiments_as_floats(float *a_data, float *x_data, float *y_data,
   float stencil_execution =
       ((float)perf_ComputeNSecDelta(&stencil_timer)) / 1e6;
 
-  printf("%d, %d, %d, %s, %s, %f, %f, %f", len, stride, offset, "float",
+  printf("%d, %d, %d, %s, %s, %f, %f, %f\n", len, stride, offset, "float",
          program_name, saxpy_execution, multiplication_execution,
          saxpy_execution);
 
@@ -322,7 +328,7 @@ uint8_t run_experiments_as_doubles(double *a_data, double *x_data,
   float stencil_execution =
       ((float)perf_ComputeNSecDelta(&stencil_timer)) / 1e6;
 
-  printf("%d, %d, %d, %s, %s, %f, %f, %f", len, stride, offset, "float",
+  printf("%d, %d, %d, %s, %s, %f, %f, %f\n", len, stride, offset, "double",
          program_name, saxpy_execution, multiplication_execution,
          saxpy_execution);
 

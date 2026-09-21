@@ -1,6 +1,6 @@
 CC := gcc-16
 # TODO: Change to O2 and remove -g after correctness checks
-CFLAGS := -O0 -g -march=native -lm
+CFLAGS := -O2 -march=native -lm -fopt-info-vec-optimized
 
 all: build build/datagen build/verifier build/experiments/serial build/experiments/autovectorized build/experiments/avx512
 
@@ -20,7 +20,7 @@ build/verifier: src/verifier/main.c
 	$(CC) ${CFLAGS} $^ -o $@
 
 build/experiments/serial: src/experiment/main.c src/experiment/kernels.c src/experiment/perf.c 
-	$(CC) ${CFLAGS} $^ -o $@
+	$(CC) ${CFLAGS} -fno-tree-vectorize -fno-tree-slp-vectorize -ffp-contract=off $^ -o $@
 
 build/experiments/autovectorized: src/experiment/main.c src/experiment/kernels.c src/experiment/perf.c 
 	$(CC) ${CFLAGS} -ftree-vectorize $^ -o $@
