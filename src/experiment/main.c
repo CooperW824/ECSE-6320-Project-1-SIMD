@@ -112,9 +112,9 @@ int main(int argc, char **argv) {
   float stencil_b_f = strtof(argv[8], NULL);
   float stencil_c_f = strtof(argv[9], NULL);
 
-  float stencil_a_d = strtof(argv[7], NULL);
-  float stencil_b_d = strtof(argv[8], NULL);
-  float stencil_c_d = strtof(argv[9], NULL);
+  double stencil_a_d = strtod(argv[7], NULL);
+  double stencil_b_d = strtod(argv[8], NULL);
+  double stencil_c_d = strtod(argv[9], NULL);
 
   uint8_t data_offset = 0;
   uint8_t stride = 1;
