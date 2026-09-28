@@ -1,6 +1,6 @@
 CC := gcc-16
 # TODO: Change to O2 and remove -g after correctness checks
-CFLAGS := -O2 -march=native -lm -fopt-info-vec-optimized
+CFLAGS := -O2 -march=znver4 -lm
 
 all: build build/datagen build/verifier build/experiments/serial build/experiments/autovectorized build/experiments/avx512
 

@@ -231,7 +231,7 @@ Check & Expected & Observed \\
 \begin{itemize}[leftmargin=1.5em]
     \item \textbf{Hardware:} CPU: x86\_64 AMD Ryzen AI 7 350 w/ Radeon 860M (SIMD Support: SSE, SSE2, AVX, AVX2, AVX-512), Memory: 32GB LPDDR5 @ 5600MT/s
     \item \textbf{OS / Kernel:} Pop\_OS! 24.04 Running Linux 7.0.11-76070011-generic
-    \item \textbf{Compiler \& Flags:} GCC 16.2.0, Flags: -O2 -march=native -ftree-vectorize (disabled for serial experiments)
+    \item \textbf{Compiler \& Flags:} GCC 16.2.0, Flags: -O2 -march=znver4 -ftree-vectorize (disabled for serial experiments)
     \item \textbf{Isolation techniques:} Ran on CPU0 with 100\% affinity, and -20 niceness (ensure no context switching)
     \item \textbf{Trials per condition:} 5 trials per condition
     \item \textbf{Timer / Instrumentation:} clock\_gettime(CLOCK\_MONOTONIC)

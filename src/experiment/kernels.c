@@ -2,22 +2,24 @@
 #include "inc/kernels.h"
 #include <assert.h>
 #include <immintrin.h>
+#include <stddef.h>
 #include <stdint.h>
 #include <sys/types.h>
 #include <xmmintrin.h>
 
 #define AVX512_VECTOR_SIZE_BYTES 64
 
+
 #ifdef VECTOR
-void kernels_SaxpyF32(float *a, float *x, float *y, uint32_t len,
-                      uint8_t stride) {
-  const uint32_t VEC_LEN = AVX512_VECTOR_SIZE_BYTES / sizeof(a[0]);
+void kernels_SaxpyF32(const float * restrict a, const float * restrict x,  float * restrict y, size_t len,
+                      size_t stride) {
+  const size_t VEC_LEN = AVX512_VECTOR_SIZE_BYTES / sizeof(a[0]);
 
   __m512i lanes =
       _mm512_setr_epi32(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15);
   __m512i indices = _mm512_mullo_epi32(lanes, _mm512_set1_epi32(stride));
 
-  uint32_t i = 0;
+  size_t i = 0;
   for (; i + VEC_LEN <= len; i += VEC_LEN) {
     if (stride == 1) {
       __m512 a_subvector = _mm512_loadu_ps(&a[i]);
@@ -43,7 +45,7 @@ void kernels_SaxpyF32(float *a, float *x, float *y, uint32_t len,
   }
 
   // Handle any remaining items on the tail using masking
-  uint32_t remainder = len - i;
+  size_t remainder = len - i;
   if (remainder == 0)
     return;
 
@@ -65,14 +67,14 @@ void kernels_SaxpyF32(float *a, float *x, float *y, uint32_t len,
     _mm512_mask_i32scatter_ps(&y[i * stride], mask, indices, res, sizeof(a[0]));
   }
 }
-void kernels_SaxpyF64(double *a, double *x, double *y, uint32_t len,
-                      uint8_t stride) {
-  const uint32_t VEC_LEN = AVX512_VECTOR_SIZE_BYTES / sizeof(a[0]);
+void kernels_SaxpyF64(const double * restrict a, const double * restrict x, double * restrict y, size_t len,
+                      size_t stride) {
+  const size_t VEC_LEN = AVX512_VECTOR_SIZE_BYTES / sizeof(a[0]);
 
   __m256i lanes = _mm256_setr_epi32(0, 1, 2, 3, 4, 5, 6, 7);
   __m256i indices = _mm256_mullo_epi32(lanes, _mm256_set1_epi32(stride));
 
-  uint32_t i = 0;
+  size_t i = 0;
   for (; i + VEC_LEN <= len; i += VEC_LEN) {
     if (stride == 1) {
       __m512d a_subvector = _mm512_loadu_pd(&a[i]);
@@ -98,7 +100,7 @@ void kernels_SaxpyF64(double *a, double *x, double *y, uint32_t len,
   }
 
   // Handle any remaining items on the tail using masking
-  uint32_t remainder = len - i;
+  size_t remainder = len - i;
   if (remainder == 0)
     return;
 
@@ -121,15 +123,15 @@ void kernels_SaxpyF64(double *a, double *x, double *y, uint32_t len,
   }
 }
 
-void kernels_MultiplyF32(float *x, float *y, float *z, uint32_t len,
-                         uint8_t stride) {
-  const uint32_t VEC_LEN = AVX512_VECTOR_SIZE_BYTES / sizeof(x[0]);
+void kernels_MultiplyF32(const float * restrict x, const float * restrict y, float * restrict z, size_t len,
+                         size_t stride) {
+  const size_t VEC_LEN = AVX512_VECTOR_SIZE_BYTES / sizeof(x[0]);
 
   __m512i lanes =
       _mm512_setr_epi32(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15);
   __m512i indices = _mm512_mullo_epi32(lanes, _mm512_set1_epi32(stride));
 
-  uint32_t i = 0;
+  size_t i = 0;
   for (; i + VEC_LEN <= len; i += VEC_LEN) {
     if (stride == 1) {
       __m512 x_subvector = _mm512_loadu_ps(&x[i]);
@@ -150,7 +152,7 @@ void kernels_MultiplyF32(float *x, float *y, float *z, uint32_t len,
   }
 
   // Handle any remaining items on the tail using masking
-  uint32_t remainder = len - i;
+  size_t remainder = len - i;
   if (remainder == 0)
     return;
 
@@ -170,14 +172,14 @@ void kernels_MultiplyF32(float *x, float *y, float *z, uint32_t len,
   }
 }
 
-void kernels_MultiplyF64(double *x, double *y, double *z, uint32_t len,
-                         uint8_t stride) {
-  const uint32_t VEC_LEN = AVX512_VECTOR_SIZE_BYTES / sizeof(x[0]);
+void kernels_MultiplyF64(const double * restrict x, const double * restrict y, double * restrict z, size_t len,
+                         size_t stride) {
+  const size_t VEC_LEN = AVX512_VECTOR_SIZE_BYTES / sizeof(x[0]);
 
   __m256i lanes = _mm256_setr_epi32(0, 1, 2, 3, 4, 5, 6, 7);
   __m256i indices = _mm256_mullo_epi32(lanes, _mm256_set1_epi32(stride));
 
-  uint32_t i = 0;
+  size_t i = 0;
   for (; i + VEC_LEN <= len; i += VEC_LEN) {
     if (stride == 1) {
       __m512d x_subvector = _mm512_loadu_pd(&x[i]);
@@ -198,7 +200,7 @@ void kernels_MultiplyF64(double *x, double *y, double *z, uint32_t len,
   }
 
   // Handle any remaining items on the tail using masking
-  uint32_t remainder = len - i;
+  size_t remainder = len - i;
   if (remainder == 0)
     return;
 
@@ -218,9 +220,9 @@ void kernels_MultiplyF64(double *x, double *y, double *z, uint32_t len,
   }
 }
 
-void kernels_ThreeStencilF32(float *x, float *y, float a, float b, float c,
-                             uint32_t len, uint8_t stride) {
-  const uint8_t VEC_LEN = AVX512_VECTOR_SIZE_BYTES / sizeof(a);
+void kernels_ThreeStencilF32(const float * restrict x, float * restrict y, float a, float b, float c,
+                             size_t len, size_t stride) {
+  const size_t VEC_LEN = AVX512_VECTOR_SIZE_BYTES / sizeof(a);
   assert(len > VEC_LEN &&
          "Array Length Must Be Greater than Number of Elements in Vector");
   y[0] = 0.0f;
@@ -233,7 +235,7 @@ void kernels_ThreeStencilF32(float *x, float *y, float a, float b, float c,
       _mm512_setr_epi32(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15);
   __m512i indices = _mm512_mullo_epi32(lanes, _mm512_set1_epi32(stride));
 
-  uint32_t i = 1;
+  size_t i = 1;
   for (; i <= len - VEC_LEN - 1; i += VEC_LEN) {
     if (stride == 1) {
       __m512 left_items = _mm512_loadu_ps(&x[i - 1]);
@@ -266,7 +268,7 @@ void kernels_ThreeStencilF32(float *x, float *y, float a, float b, float c,
   }
 
   // Handle any trailing items in parallel using masking
-  uint32_t remainder = (len - 1) - i;
+  size_t remainder = (len - 1) - i;
   if (remainder == 0)
     return;
 
@@ -301,9 +303,9 @@ void kernels_ThreeStencilF32(float *x, float *y, float a, float b, float c,
   }
 }
 
-void kernels_ThreeStencilF64(double *x, double *y, double a, double b, double c,
-                             uint32_t len, uint8_t stride) {
-  const uint8_t VEC_LEN = AVX512_VECTOR_SIZE_BYTES / sizeof(a);
+void kernels_ThreeStencilF64(const double * restrict x,  double * restrict y, double a, double b, double c,
+                             size_t len, size_t stride) {
+  const size_t VEC_LEN = AVX512_VECTOR_SIZE_BYTES / sizeof(a);
   assert(len > VEC_LEN &&
          "Array Length Must Be Greater than Number of Elements in Vector");
   y[0] = 0.0;
@@ -315,7 +317,7 @@ void kernels_ThreeStencilF64(double *x, double *y, double a, double b, double c,
   __m256i lanes = _mm256_setr_epi32(0, 1, 2, 3, 4, 5, 6, 7);
   __m256i indices = _mm256_mullo_epi32(lanes, _mm256_set1_epi32(stride));
 
-  uint32_t i = 1;
+  size_t i = 1;
   for (; i <= len - VEC_LEN - 1; i += VEC_LEN) {
     if (stride == 1) {
       __m512d left_items = _mm512_loadu_pd(&x[i - 1]);
@@ -348,7 +350,7 @@ void kernels_ThreeStencilF64(double *x, double *y, double a, double b, double c,
   }
 
   // Handle any trailing items in parallel using masking
-  uint32_t remainder = (len - 1) - i;
+  size_t remainder = (len - 1) - i;
   if (remainder == 0)
     return;
 
@@ -383,48 +385,80 @@ void kernels_ThreeStencilF64(double *x, double *y, double a, double b, double c,
   }
 }
 #else
-void kernels_SaxpyF32(float *a, float *x, float *y, uint32_t len,
-                      uint8_t stride) {
-  for (uint32_t i = 0; i < len; i++) {
-    y[i * stride] += a[i * stride] * x[i * stride];
-  }
-}
-void kernels_SaxpyF64(double *a, double *x, double *y, uint32_t len,
-                      uint8_t stride) {
-  for (uint32_t i = 0; i < len; i++) {
-    y[i * stride] += a[i * stride] * x[i * stride];
-  }
-}
 
-void kernels_MultiplyF32(float *x, float *y, float *z, uint32_t len,
-                         uint8_t stride) {
-  for (uint32_t i = 0; i < len; i++) {
-    z[i * stride] = x[i * stride] * y[i * stride];
-  }
-}
-void kernels_MultiplyF64(double *x, double *y, double *z, uint32_t len,
-                         uint8_t stride) {
-  for (uint32_t i = 0; i < len; i++) {
-    z[i * stride] = x[i * stride] * y[i * stride];
-  }
-}
+/* Force the impl to be inlined into each switch case so `stride` is a
+ * compile-time constant there. */
+#define KERNEL_INLINE static inline __attribute__((always_inline))
 
-void kernels_ThreeStencilF32(float *x, float *y, float a, float b, float c,
-                             uint32_t len, uint8_t stride) {
-  y[0] = 0.0f;
-  y[len - 1] = 0.0f;
-  for (uint32_t i = 1; i < len - 1; i++) {
-    y[i * stride] =
-        a * x[(i - 1) * stride] + b * x[i * stride] + c * x[(i + 1) * stride];
+/* Expands to a switch over the strides main.c allows. The default case
+ * falls back to the runtime-stride path (scalar, but still correct)
+ * rather than silently doing nothing. */
+#define DISPATCH_STRIDE(IMPL, STRIDE, ...)                                     \
+  switch (STRIDE) {                                                            \
+  case 1: IMPL(__VA_ARGS__, 1); break;                                         \
+  case 2: IMPL(__VA_ARGS__, 2); break;                                         \
+  case 4: IMPL(__VA_ARGS__, 4); break;                                         \
+  case 8: IMPL(__VA_ARGS__, 8); break;                                         \
+  default: IMPL(__VA_ARGS__, (STRIDE)); break;                                 \
   }
-}
-void kernels_ThreeStencilF64(double *x, double *y, double a, double b, double c,
-                             uint32_t len, uint8_t stride) {
-  y[0] = 0.0;
-  y[len - 1] = 0.0;
-  for (uint32_t i = 1; i < len - 1; i++) {
-    y[i * stride] =
-        a * x[(i - 1 * stride)] + b * x[i * stride] + c * x[(i + 1) * stride];
+
+/* ---------------------------- SAXPY ---------------------------- */
+
+#define DEFINE_SAXPY(SUFFIX, T)                                                \
+  KERNEL_INLINE void saxpy_impl_##SUFFIX(const T *restrict a,                  \
+                                         const T *restrict x, T *restrict y,   \
+                                         size_t len, size_t stride) {          \
+    for (size_t i = 0; i < len; i++)                                           \
+      y[i * stride] += a[i * stride] * x[i * stride];                          \
+  }                                                                            \
+  void kernels_Saxpy##SUFFIX(const T *restrict a, const T *restrict x,         \
+                             T *restrict y, size_t len, size_t stride) {       \
+    DISPATCH_STRIDE(saxpy_impl_##SUFFIX, stride, a, x, y, len)                 \
   }
-}
+
+DEFINE_SAXPY(F32, float)
+DEFINE_SAXPY(F64, double)
+
+/* --------------------------- MULTIPLY --------------------------- */
+
+#define DEFINE_MULTIPLY(SUFFIX, T)                                             \
+  KERNEL_INLINE void multiply_impl_##SUFFIX(const T *restrict x,               \
+                                            const T *restrict y,               \
+                                            T *restrict z, size_t len,         \
+                                            size_t stride) {                   \
+    for (size_t i = 0; i < len; i++)                                           \
+      z[i * stride] = x[i * stride] * y[i * stride];                           \
+  }                                                                            \
+  void kernels_Multiply##SUFFIX(const T *restrict x, const T *restrict y,      \
+                                T *restrict z, size_t len, size_t stride) {    \
+    DISPATCH_STRIDE(multiply_impl_##SUFFIX, stride, x, y, z, len)              \
+  }
+
+DEFINE_MULTIPLY(F32, float)
+DEFINE_MULTIPLY(F64, double)
+
+/* -------------------------- THREE-POINT STENCIL -------------------------- */
+
+#define DEFINE_STENCIL(SUFFIX, T)                                              \
+  KERNEL_INLINE void stencil_impl_##SUFFIX(const T *restrict x, T *restrict y, \
+                                           T a, T b, T c, size_t len,          \
+                                           size_t stride) {                    \
+    for (size_t i = 1; i < len - 1; i++)                                       \
+      y[i * stride] = a * x[(i - 1) * stride] + b * x[i * stride] +            \
+                      c * x[(i + 1) * stride];                                 \
+  }                                                                            \
+  void kernels_ThreeStencil##SUFFIX(const T *restrict x, T *restrict y, T a,   \
+                                    T b, T c, size_t len, size_t stride) {     \
+    if (len == 0)                                                              \
+      return;                                                                  \
+    y[0] = 0;                                                                  \
+    if (len < 2)                                                               \
+      return;                                                                  \
+    y[(len - 1) * stride] = 0;                                                 \
+    DISPATCH_STRIDE(stencil_impl_##SUFFIX, stride, x, y, a, b, c, len)         \
+  }
+
+DEFINE_STENCIL(F32, float)
+DEFINE_STENCIL(F64, double)
+
 #endif
