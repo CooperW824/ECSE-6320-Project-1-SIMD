@@ -11,7 +11,7 @@ typedef struct {
 
 void perf_StartTimer(perf_Timer * timer);
 void perf_EndTimer(perf_Timer * timer);
-uint64_t perf_ComputeNSecDelta(perf_Timer * timer);
+uint64_t perf_ComputeNSecDelta(const perf_Timer * timer);
 
 
 #endif /* PERF_H */
