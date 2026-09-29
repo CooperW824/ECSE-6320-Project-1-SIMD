@@ -100,7 +100,7 @@ int main(int argc, char **argv) {
 
   if (strcmp(argv[5], "4") == 0) {
     data_size = 4;
-  } else if (strcmp(argv[5], "8")) {
+  } else if (strcmp(argv[5], "8") == 0) {
     data_size = 8;
   } else {
     fprintf(stderr, "Invalid Data Size \n");
@@ -172,18 +172,21 @@ int main(int argc, char **argv) {
 
   if (items_read != num_elements) {
     perror("Read the wrong number of items from the A data file");
+    return EXIT_FAILURE;
   }
 
   items_read = fread(raw_x_data, data_size, num_elements, x_file);
 
   if (items_read != num_elements) {
     perror("Read the wrong number of items from the X data file");
+    return EXIT_FAILURE;
   }
 
   items_read = fread(raw_y_data, data_size, num_elements, y_file);
 
   if (items_read != num_elements) {
     perror("Read the wrong number of items from the Y data file");
+    return EXIT_FAILURE;
   }
 
   format_input_data(raw_a_data, formatted_a_data, num_elements, data_size,
@@ -295,7 +298,7 @@ uint8_t run_experiments_as_floats(float *a_data, float *x_data, float *y_data,
 
   printf("%d, %d, %d, %s, %s, %f, %f, %f\n", len, stride, offset, "float",
          program_name, saxpy_execution, multiplication_execution,
-         saxpy_execution);
+         stencil_execution);
 
   return 0;
 }
@@ -343,7 +346,7 @@ uint8_t run_experiments_as_doubles(double *a_data, double *x_data,
 
   printf("%d, %d, %d, %s, %s, %f, %f, %f\n", len, stride, offset, "double",
          program_name, saxpy_execution, multiplication_execution,
-         saxpy_execution);
+         stencil_execution);
 
   return 0;
 }
