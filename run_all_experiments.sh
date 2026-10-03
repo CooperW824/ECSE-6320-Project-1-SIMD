@@ -1,54 +1,55 @@
+#!/usr/bin/env bash
+# Usage: sudo ./run_experiments.sh > results.csv
+set -u
+
+REPS=11          # first run per config can be treated as warm-up
+CORE=2           # pin to this core
+PROGS=(serial autovectorized avx512)
+OUTS=(float_serial float_auto float_avx512)
+
+if [[ $EUID -ne 0 ]]; then
+    echo "warning: not root, nice -n -20 will not take effect" >&2
+fi
+
+# run_config <dtype: f32|f64> <bytes per element> <length> <offset> <stride>
+run_config() {
+    local dt=$1 bytes=$2 len=$3 off=$4 stride=$5
+    local i p
+    for ((i = 0; i < REPS; i++)); do
+        for p in "${!PROGS[@]}"; do
+            nice -n -20 taskset -c "$CORE" "./build/experiments/${PROGS[$p]}" \
+                "./data/inputs/a_${dt}.floatdata" \
+                "./data/inputs/x_${dt}.floatdata" \
+                "./data/inputs/y_${dt}.floatdata" \
+                "./data/outputs/${OUTS[$p]}" \
+                "$bytes" "$len" 1.0 2.0 3.0 "$off" "$stride"
+        done
+    done
+}
+
 echo "Array Length, Stride, Offset, Datatype, Program Name, SAXPY Execution (ms), MULT Execution (ms), Stencil Execution (ms)"
 
-# Experiment 1: Data Size
+# Experiment 1: Datatype (f32 vs f64, fixed element count)
+run_config f32 4 1048576 0 1
+run_config f64 8 1048576 0 1
 
-for i in {0..10}
-do
-nice -n -20 ./build/experiments/serial ./data/inputs/a_f32.floatdata ./data/inputs/x_f32.floatdata ./data/inputs/y_f32.floatdata ./data/outputs/float_serial 4 1048576 1.0 2.0 3.0 0 1
-nice -n -20 ./build/experiments/autovectorized ./data/inputs/a_f32.floatdata ./data/inputs/x_f32.floatdata ./data/inputs/y_f32.floatdata ./data/outputs/float_auto 4 1048576 1.0 2.0 3.0 0 1
-nice -n -20 ./build/experiments/avx512 ./data/inputs/a_f32.floatdata ./data/inputs/x_f32.floatdata ./data/inputs/y_f32.floatdata ./data/outputs/float_avx512 4 1048576 1.0 2.0 3.0 0 1
-done
-
-for i in {0..10}
-do
-nice -n -20 ./build/experiments/serial ./data/inputs/a_f64.floatdata ./data/inputs/x_f64.floatdata ./data/inputs/y_f64.floatdata ./data/outputs/float_serial 8 1048576 1.0 2.0 3.0 0 1
-nice -n -20 ./build/experiments/autovectorized ./data/inputs/a_f64.floatdata ./data/inputs/x_f64.floatdata ./data/inputs/y_f64.floatdata ./data/outputs/float_auto 8 1048576 1.0 2.0 3.0 0 1
-nice -n -20 ./build/experiments/avx512 ./data/inputs/a_f64.floatdata ./data/inputs/x_f64.floatdata ./data/inputs/y_f64.floatdata ./data/outputs/float_avx512 8 1048576 1.0 2.0 3.0 0 1
-done
-
-# Experiment 2: Data Alignment
-
-for offset in {0..63}
-do
-	for i in {0..10}
-	do
-		nice -n -20 ./build/experiments/serial ./data/inputs/a_f32.floatdata ./data/inputs/x_f32.floatdata ./data/inputs/y_f32.floatdata ./data/outputs/float_serial 4 1048576 1.0 2.0 3.0 $offset 1
-		nice -n -20 ./build/experiments/autovectorized ./data/inputs/a_f32.floatdata ./data/inputs/x_f32.floatdata ./data/inputs/y_f32.floatdata ./data/outputs/float_auto 4 1048576 1.0 2.0 3.0 $offset 1
-		nice -n -20 ./build/experiments/avx512 ./data/inputs/a_f32.floatdata ./data/inputs/x_f32.floatdata ./data/inputs/y_f32.floatdata ./data/outputs/float_avx512 4 1048576 1.0 2.0 3.0 $offset 1
-	done
+# Experiment 2: Data alignment (offset)
+for offset in {0..63}; do
+    run_config f32 4 1048576 "$offset" 1
 done
 
 # Experiment 3: Stride
 strides=(1 2 4 8)
-
-for stride in $strides
-do
-	for i in {0..10}
-	do
-		nice -n -20 ./build/experiments/serial ./data/inputs/a_f32.floatdata ./data/inputs/x_f32.floatdata ./data/inputs/y_f32.floatdata ./data/outputs/float_serial 4 1048576 1.0 2.0 3.0 0 $stride
-		nice -n -20 ./build/experiments/autovectorized ./data/inputs/a_f32.floatdata ./data/inputs/x_f32.floatdata ./data/inputs/y_f32.floatdata ./data/outputs/float_auto 4 1048576 1.0 2.0 3.0 0 $stride
-		nice -n -20 ./build/experiments/avx512 ./data/inputs/a_f32.floatdata ./data/inputs/x_f32.floatdata ./data/inputs/y_f32.floatdata ./data/outputs/float_avx512 4 1048576 1.0 2.0 3.0 0 $stride
-	done
+for stride in "${strides[@]}"; do
+    run_config f32 4 1048576 0 "$stride"
 done
 
-# Experiment 4: Working Set Size
-sizes=(4096 65536 1048576 16777216)
-for size in $sizes
-do
-	for i in {0..10}
-	do
-		nice -n -20 ./build/experiments/serial ./data/inputs/a_f32.floatdata ./data/inputs/x_f32.floatdata ./data/inputs/y_f32.floatdata ./data/outputs/float_serial 4 $size 1.0 2.0 3.0 0 1
-		nice -n -20 ./build/experiments/autovectorized ./data/inputs/a_f32.floatdata ./data/inputs/x_f32.floatdata ./data/inputs/y_f32.floatdata ./data/outputs/float_auto 4 $size 1.0 2.0 3.0 0 1
-		nice -n -20 ./build/experiments/avx512 ./data/inputs/a_f32.floatdata ./data/inputs/x_f32.floatdata ./data/inputs/y_f32.floatdata ./data/outputs/float_avx512 4 $size 1.0 2.0 3.0 0 1
-	done
+# Experiment 4: Working set size (2^10 .. 2^28 elements)
+for size in {10..28}; do
+    run_config f32 4 $((2**size)) 0 1
+done
+
+# Experiment 5: Tail Length Performance Measurement
+for size in {0..64}; do
+    run_config f32 4 $((2**20 + size)) 0 1
 done

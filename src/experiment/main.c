@@ -56,18 +56,6 @@ int main(int argc, char **argv) {
     return 1;
   }
 
-  cpu_set_t mask;
-  CPU_ZERO(&mask);
-
-  // Pin to CPU core 0 (change index for other cores)
-  CPU_SET(0, &mask);
-
-  // Apply affinity to the current process
-  if (sched_setaffinity(0, sizeof(cpu_set_t), &mask) == -1) {
-    perror("sched_setaffinity");
-    exit(EXIT_FAILURE);
-  }
-
   // Grabbing Inputs and Validating Inputs
 
   char *a_filename = argv[1];
