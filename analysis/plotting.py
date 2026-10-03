@@ -186,28 +186,30 @@ def working_set_plots(rows, output_dir):
     save(fig, output_dir, "working_set_scaling.png")
 
     # Report a directly measurable element processing rate (not estimated FLOP/s
-    # or bandwidth), derived from the recorded element count and median time.
-    fig, ax = plt.subplots(figsize=(9, 5.5))
-    kernel = "SAXPY"
-    for impl in IMPLEMENTATIONS:
-        xs, rates, rate_stds = [], [], []
-        for length, stride, offset, datatype in configurations:
-            config = {"length": length, "stride": stride, "offset": offset, "datatype": datatype}
-            key = tuple(config[name] for name in ("length", "stride", "offset", "datatype")) + (impl,)
-            data = summary.get(key)
-            if data:
-                xs.append(length)
-                samples = [length / (time_ms / 1000.0) / 1e9 for time_ms in data["SAXPY_samples"] if time_ms > 0]
-                rates.append(statistics.median(samples))
-                rate_stds.append(statistics.stdev(samples) if len(samples) > 1 else 0.0)
-        if xs:
-            plot_with_std(ax, xs, rates, rate_stds, impl)
-    ax.set_xscale("log", base=2)
-    ax.set_xlabel("Working-set length (elements)")
-    ax.set_ylabel("Element throughput (G elements/s)")
-    ax.set_title("SAXPY achieved element throughput")
-    ax.grid(True, which="both", alpha=0.25)
-    ax.legend()
+    # or bandwidth), derived from the recorded element count and execution time.
+    fig, axes = plt.subplots(len(TIME_COLUMNS), 1, figsize=(9, 14), sharex=True)
+    for ax, kernel in zip(axes, TIME_COLUMNS):
+        for impl in IMPLEMENTATIONS:
+            xs, rates, rate_stds = [], [], []
+            for length, stride, offset, datatype in configurations:
+                config = {"length": length, "stride": stride, "offset": offset, "datatype": datatype}
+                key = tuple(config[name] for name in ("length", "stride", "offset", "datatype")) + (impl,)
+                data = summary.get(key)
+                if data:
+                    xs.append(length)
+                    samples = [length / (time_ms / 1000.0) / 1e9
+                               for time_ms in data[f"{kernel}_samples"] if time_ms > 0]
+                    rates.append(statistics.median(samples))
+                    rate_stds.append(statistics.stdev(samples) if len(samples) > 1 else 0.0)
+            if xs:
+                plot_with_std(ax, xs, rates, rate_stds, impl)
+        ax.set_xscale("log", base=2)
+        ax.set_ylabel("G elements/s")
+        ax.set_title(f"{kernel} element throughput")
+        ax.grid(True, which="both", alpha=0.25)
+        ax.legend()
+    axes[-1].set_xlabel("Working-set length (elements)")
+    fig.suptitle("Achieved element throughput", fontsize=14)
     save(fig, output_dir, "working_set_throughput.png")
 
 
@@ -274,20 +276,23 @@ def sweep_plot(rows, output_dir, dimension, select, title, xlabel, filename,
 
 def alignment_and_tail_plots(rows, output_dir):
     # In this runner, offset is the initial byte displacement applied to arrays.
-    sweep_plot(rows, output_dir, "offset", lambda value: 0 <= value <= 63,
-               "Alignment sweep (SAXPY)", "Initial byte offset", "alignment_sweep.png",
-               relative=False)
-    sweep_plot(rows, output_dir, "offset", lambda value: 0 <= value <= 63,
-               "Alignment sweep: speedup vs. scalar (SAXPY)", "Initial byte offset",
-               "alignment_speedup.png", relative=True)
+    for kernel in TIME_COLUMNS:
+        suffix = kernel.lower()
+        sweep_plot(rows, output_dir, "offset", lambda value: 0 <= value <= 63,
+                   f"Alignment sweep ({kernel})", "Initial byte offset",
+                   f"alignment_sweep_{suffix}.png", kernel=kernel, relative=False)
+        sweep_plot(rows, output_dir, "offset", lambda value: 0 <= value <= 63,
+                   f"Alignment sweep: speedup vs. scalar ({kernel})", "Initial byte offset",
+                   f"alignment_speedup_{suffix}.png", kernel=kernel, relative=True)
 
-    sweep_plot(rows, output_dir, "length", lambda value: (1 << 20) <= value <= (1 << 20) + 64,
-               "Tail-length sweep (SAXPY)", "Tail elements after a 1,048,576-element vector",
-               "tail_sweep.png", relative=False, x_transform=lambda value: value - (1 << 20))
-    sweep_plot(rows, output_dir, "length", lambda value: (1 << 20) <= value <= (1 << 20) + 64,
-               "Tail-length sweep: speedup vs. scalar (SAXPY)",
-               "Tail elements after a 1,048,576-element vector", "tail_speedup.png",
-               relative=True, x_transform=lambda value: value - (1 << 20))
+        sweep_plot(rows, output_dir, "length", lambda value: (1 << 20) <= value <= (1 << 20) + 64,
+                   f"Tail-length sweep ({kernel})", "Tail elements after a 1,048,576-element vector",
+                   f"tail_sweep_{suffix}.png", kernel=kernel, relative=False,
+                   x_transform=lambda value: value - (1 << 20))
+        sweep_plot(rows, output_dir, "length", lambda value: (1 << 20) <= value <= (1 << 20) + 64,
+                   f"Tail-length sweep: speedup vs. scalar ({kernel})",
+                   "Tail elements after a 1,048,576-element vector", f"tail_speedup_{suffix}.png",
+                   kernel=kernel, relative=True, x_transform=lambda value: value - (1 << 20))
 
 
 def stride_and_datatype_plots(rows, output_dir):
@@ -295,33 +300,34 @@ def stride_and_datatype_plots(rows, output_dir):
     strides = sorted({key[1] for key in stride_summary
                       if key[0] == 1_048_576 and key[2] == 0 and key[3] == "float"})
     if strides:
-        fig, axes = plt.subplots(1, 2, figsize=(12, 5))
-        for impl in IMPLEMENTATIONS:
-            timings, time_stds, speedups, speed_stds = [], [], [], []
-            valid_strides = []
-            for stride in strides:
-                config = {"length": 1_048_576, "stride": stride, "offset": 0, "datatype": "float"}
-                timing = find_value(stride_summary, ("length", "stride", "offset", "datatype"), config, impl, "SAXPY")
-                baseline = find_value(stride_summary, ("length", "stride", "offset", "datatype"), config, "serial", "SAXPY")
-                if timing and baseline:
-                    valid_strides.append(stride)
-                    timings.append(timing)
-                    time_stds.append(find_std(stride_summary, ("length", "stride", "offset", "datatype"), config, impl, "SAXPY"))
-                    speedups.append(baseline / timing)
-                    speed_stds.append(speedup_std(stride_summary, ("length", "stride", "offset", "datatype"), config, impl, "SAXPY"))
-            if valid_strides:
-                plot_with_std(axes[0], valid_strides, timings, time_stds, impl)
-                plot_with_std(axes[1], valid_strides, speedups, speed_stds, impl)
-        axes[0].set_ylabel("Median time (ms)")
-        axes[0].set_title("SAXPY execution time")
-        axes[1].set_ylabel("Speedup vs. scalar (×)")
-        axes[1].set_title("SAXPY speedup")
-        axes[1].axhline(1.0, color="#777777", linewidth=1, linestyle="--")
-        for ax in axes:
-            ax.set_xlabel("Stride (elements)")
-            ax.set_xticks(strides)
-            ax.grid(True, alpha=0.25)
-            ax.legend()
+        fig, axes = plt.subplots(len(TIME_COLUMNS), 2, figsize=(12, 13))
+        for row_index, kernel in enumerate(TIME_COLUMNS):
+            for impl in IMPLEMENTATIONS:
+                timings, time_stds, speedups, speed_stds = [], [], [], []
+                valid_strides = []
+                for stride in strides:
+                    config = {"length": 1_048_576, "stride": stride, "offset": 0, "datatype": "float"}
+                    timing = find_value(stride_summary, ("length", "stride", "offset", "datatype"), config, impl, kernel)
+                    baseline = find_value(stride_summary, ("length", "stride", "offset", "datatype"), config, "serial", kernel)
+                    if timing and baseline:
+                        valid_strides.append(stride)
+                        timings.append(timing)
+                        time_stds.append(find_std(stride_summary, ("length", "stride", "offset", "datatype"), config, impl, kernel))
+                        speedups.append(baseline / timing)
+                        speed_stds.append(speedup_std(stride_summary, ("length", "stride", "offset", "datatype"), config, impl, kernel))
+                if valid_strides:
+                    plot_with_std(axes[row_index, 0], valid_strides, timings, time_stds, impl)
+                    plot_with_std(axes[row_index, 1], valid_strides, speedups, speed_stds, impl)
+            axes[row_index, 0].set_ylabel("Median time (ms)")
+            axes[row_index, 0].set_title(f"{kernel}: execution time")
+            axes[row_index, 1].set_ylabel("Speedup vs. scalar (×)")
+            axes[row_index, 1].set_title(f"{kernel}: speedup")
+            axes[row_index, 1].axhline(1.0, color="#777777", linewidth=1, linestyle="--")
+            for ax in axes[row_index]:
+                ax.set_xlabel("Stride (elements)")
+                ax.set_xticks(strides)
+                ax.grid(True, alpha=0.25)
+                ax.legend()
         fig.suptitle("Stride sweep: 1,048,576 float elements, zero offset")
         save(fig, output_dir, "stride_sweep.png")
     else:
