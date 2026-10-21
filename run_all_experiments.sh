@@ -45,6 +45,7 @@ for stride in "${strides[@]}"; do
     run_config f32 4 1048576 0 "$stride"
 done
 
+# Experiment 4: Working Set Size Sweep
 for size in {11..29}; do
     len=$(awk -v s="$size" 'BEGIN { printf "%d", int(1.9^s / 16) * 16 }')
     run_config f32 4 "$len" 0 1
