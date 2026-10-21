@@ -2,7 +2,7 @@
 # Usage: sudo ./run_experiments.sh > results.csv
 set -u
 
-REPS=11          # first run per config can be treated as warm-up
+REPS=1
 CORE=2           # pin to this core
 PROGS=(serial autovectorized avx512)
 OUTS=(float_serial float_auto float_avx512)
@@ -27,7 +27,7 @@ run_config() {
     done
 }
 
-echo "Array Length, Stride, Offset, Datatype, Program Name, SAXPY Execution (ms), MULT Execution (ms), Stencil Execution (ms)"
+echo "Array Length, Stride, Offset, Datatype, Program Name, Median SAXPY Execution (ms), Median MULT Execution (ms), Median Stencil Execution (ms), Min SAXPY Execution (ms), Min MULT Execution (ms), Min Stencil Execution (ms)"
 
 # Experiment 1: Datatype (f32 vs f64, fixed element count)
 run_config f32 4 1048576 0 1
@@ -44,9 +44,9 @@ for stride in "${strides[@]}"; do
     run_config f32 4 1048576 0 "$stride"
 done
 
-# Experiment 4: Working set size (2^10 .. 2^28 elements)
-for size in {10..28}; do
-    run_config f32 4 $((2**size)) 0 1
+for size in {11..29}; do
+    len=$(awk -v s="$size" 'BEGIN { printf "%d", int(1.9^s / 16) * 16 }')
+    run_config f32 4 "$len" 0 1
 done
 
 # Experiment 5: Tail Length Performance Measurement

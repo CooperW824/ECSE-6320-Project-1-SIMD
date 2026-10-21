@@ -11,6 +11,44 @@
 #include <stdlib.h>
 #include <string.h>
 
+#define TIMED_RUNS 30
+#define WARMUP_NS UINT64_C(100000000)
+
+static void sort_timings(uint64_t timings[TIMED_RUNS]) {
+  for (size_t i = 1; i < TIMED_RUNS; ++i) {
+    uint64_t value = timings[i];
+    size_t j = i;
+    while (j > 0 && timings[j - 1] > value) {
+      timings[j] = timings[j - 1];
+      --j;
+    }
+    timings[j] = value;
+  }
+}
+
+#define MEASURE_KERNEL(timings, kernel_call)                                  \
+  do {                                                                         \
+    perf_Timer warmup_timer;                                                   \
+    perf_StartTimer(&warmup_timer);                                            \
+    do {                                                                       \
+      kernel_call;                                                             \
+      perf_EndTimer(&warmup_timer);                                            \
+    } while (perf_ComputeNSecDelta(&warmup_timer) < WARMUP_NS);               \
+    for (size_t run = 0; run < TIMED_RUNS; ++run) {                            \
+      perf_Timer run_timer;                                                    \
+      perf_StartTimer(&run_timer);                                             \
+      kernel_call;                                                             \
+      perf_EndTimer(&run_timer);                                               \
+      timings[run] = perf_ComputeNSecDelta(&run_timer);                        \
+    }                                                                          \
+    sort_timings(timings);                                                     \
+  } while (0)
+
+#define MEDIAN_MS(timings)                                                     \
+  (((double)(timings)[TIMED_RUNS / 2 - 1] +                                  \
+    (double)(timings)[TIMED_RUNS / 2]) /  2e6)
+#define MIN_MS(timings) ((double)(timings)[0] / 1e6)
+
 /**
  * @brief Takes an array of num_elements * element_size bytes and offsets the
  *        start by offset bytes and strides elements by stride number of
@@ -243,6 +281,18 @@ uint8_t run_experiments_as_floats(float *a_data, float *x_data, float *y_data,
                                   float stencil_b, float stencil_c,
                                   uint8_t stride, uint8_t offset,
                                   char *program_name, char *output_dir) {
+  uint64_t saxpy_timings[TIMED_RUNS];
+  uint64_t multiplication_timings[TIMED_RUNS];
+  uint64_t stencil_timings[TIMED_RUNS];
+
+  MEASURE_KERNEL(saxpy_timings,
+                 kernels_SaxpyF32(a_data, x_data, y_data, len, stride));
+  MEASURE_KERNEL(multiplication_timings,
+                 kernels_MultiplyF32(a_data, x_data, y_data, len, stride));
+  MEASURE_KERNEL(stencil_timings,
+                 kernels_ThreeStencilF32(x_data, y_data, stencil_a, stencil_b,
+                                         stencil_c, len, stride));
+
   char output_filename[4096];
   sprintf(output_filename, "%s/saxpy_output.floatdata", output_dir);
   FILE *saxpy_output = fopen(output_filename, "w");
@@ -252,41 +302,36 @@ uint8_t run_experiments_as_floats(float *a_data, float *x_data, float *y_data,
     return 1;
   }
 
-  perf_Timer SAXPY_timer;
-  perf_StartTimer(&SAXPY_timer);
   kernels_SaxpyF32(a_data, x_data, y_data, len, stride);
-  perf_EndTimer(&SAXPY_timer);
   fwrite(y_data, len * stride, sizeof(float), saxpy_output);
   fclose(saxpy_output);
 
   sprintf(output_filename, "%s/multiplication_output.floatdata", output_dir);
   FILE *multiplication_output = fopen(output_filename, "w");
-  perf_Timer multiplication_timer;
-  perf_StartTimer(&multiplication_timer);
+  if (multiplication_output == NULL) {
+    perror("Issue opening multiplication output file:");
+    return 1;
+  }
   kernels_MultiplyF32(a_data, x_data, y_data, len, stride);
-  perf_EndTimer(&multiplication_timer);
   fwrite(y_data, len * stride, sizeof(float), multiplication_output);
   fclose(multiplication_output);
 
   sprintf(output_filename, "%s/stencil_output.floatdata", output_dir);
   FILE *stencil_output = fopen(output_filename, "w");
-  perf_Timer stencil_timer;
-  perf_StartTimer(&stencil_timer);
+  if (stencil_output == NULL) {
+    perror("Issue opening stencil output file:");
+    return 1;
+  }
   kernels_ThreeStencilF32(x_data, y_data, stencil_a, stencil_b, stencil_c, len,
                           stride);
-  perf_EndTimer(&stencil_timer);
   fwrite(y_data, len * stride, sizeof(float), stencil_output);
   fclose(stencil_output);
 
-  float saxpy_execution = ((float)perf_ComputeNSecDelta(&SAXPY_timer)) / 1e6;
-  float multiplication_execution =
-      ((float)perf_ComputeNSecDelta(&multiplication_timer)) / 1e6;
-  float stencil_execution =
-      ((float)perf_ComputeNSecDelta(&stencil_timer)) / 1e6;
-
-  printf("%d, %d, %d, %s, %s, %f, %f, %f\n", len, stride, offset, "float",
-         program_name, saxpy_execution, multiplication_execution,
-         stencil_execution);
+  printf("%d, %d, %d, %s, %s, %f, %f, %f, %f, %f, %f\n", len, stride,
+         offset, "float", program_name, MEDIAN_MS(saxpy_timings),
+         MEDIAN_MS(multiplication_timings), MEDIAN_MS(stencil_timings),
+         MIN_MS(saxpy_timings), MIN_MS(multiplication_timings),
+         MIN_MS(stencil_timings));
 
   return 0;
 }
@@ -297,44 +342,43 @@ uint8_t run_experiments_as_doubles(double *a_data, double *x_data,
                                    double stencil_c, uint8_t stride,
                                    uint8_t offset, char *program_name,
                                    char *output_dir) {
+  uint64_t saxpy_timings[TIMED_RUNS];
+  uint64_t multiplication_timings[TIMED_RUNS];
+  uint64_t stencil_timings[TIMED_RUNS];
+
+  MEASURE_KERNEL(saxpy_timings,
+                 kernels_SaxpyF64(a_data, x_data, y_data, len, stride));
+  MEASURE_KERNEL(multiplication_timings,
+                 kernels_MultiplyF64(a_data, x_data, y_data, len, stride));
+  MEASURE_KERNEL(stencil_timings,
+                 kernels_ThreeStencilF64(x_data, y_data, stencil_a, stencil_b,
+                                         stencil_c, len, stride));
+
   char output_filename[4096];
   sprintf(output_filename, "%s/saxpy_output.floatdata", output_dir);
   FILE *saxpy_output = fopen(output_filename, "w");
-  perf_Timer SAXPY_timer;
-  perf_StartTimer(&SAXPY_timer);
   kernels_SaxpyF64(a_data, x_data, y_data, len, stride);
-  perf_EndTimer(&SAXPY_timer);
   fwrite(y_data, len * stride, sizeof(double), saxpy_output);
   fclose(saxpy_output);
 
   sprintf(output_filename, "%s/multiplication_output.floatdata", output_dir);
   FILE *multiplication_output = fopen(output_filename, "w");
-  perf_Timer multiplication_timer;
-  perf_StartTimer(&multiplication_timer);
   kernels_MultiplyF64(a_data, x_data, y_data, len, stride);
-  perf_EndTimer(&multiplication_timer);
   fwrite(y_data, len * stride, sizeof(double), multiplication_output);
   fclose(multiplication_output);
 
   sprintf(output_filename, "%s/stencil_output.floatdata", output_dir);
   FILE *stencil_output = fopen(output_filename, "w");
-  perf_Timer stencil_timer;
-  perf_StartTimer(&stencil_timer);
   kernels_ThreeStencilF64(x_data, y_data, stencil_a, stencil_b, stencil_c, len,
                           stride);
-  perf_EndTimer(&stencil_timer);
   fwrite(y_data, len * stride, sizeof(double), stencil_output);
   fclose(stencil_output);
 
-  float saxpy_execution = ((float)perf_ComputeNSecDelta(&SAXPY_timer)) / 1e6;
-  float multiplication_execution =
-      ((float)perf_ComputeNSecDelta(&multiplication_timer)) / 1e6;
-  float stencil_execution =
-      ((float)perf_ComputeNSecDelta(&stencil_timer)) / 1e6;
-
-  printf("%d, %d, %d, %s, %s, %f, %f, %f\n", len, stride, offset, "double",
-         program_name, saxpy_execution, multiplication_execution,
-         stencil_execution);
+  printf("%d, %d, %d, %s, %s, %f, %f, %f, %f, %f, %f\n", len, stride,
+         offset, "double", program_name, MEDIAN_MS(saxpy_timings),
+         MEDIAN_MS(multiplication_timings), MEDIAN_MS(stencil_timings),
+         MIN_MS(saxpy_timings), MIN_MS(multiplication_timings),
+         MIN_MS(stencil_timings));
 
   return 0;
 }
