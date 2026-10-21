@@ -77,6 +77,7 @@ def plot_sweep(
     xlabel: str,
     fixed_filters: dict[str, object],
     log_x: bool = False,
+    log_y: bool = False,
 ) -> None:
     groups = collapse_measurements(rows, varying_key, fixed_filters)
     values = sorted({key[0] for key in groups})
@@ -114,6 +115,8 @@ def plot_sweep(
             axis.legend(fontsize="small")
             if log_x:
                 axis.set_xscale("log")
+            if log_y:
+                axis.set_yscale("log")
 
     axes[-1, 0].set_xlabel(xlabel)
     axes[-1, 1].set_xlabel(xlabel)
