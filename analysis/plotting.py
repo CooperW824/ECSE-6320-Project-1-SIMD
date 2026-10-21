@@ -25,6 +25,7 @@ TIME_COLUMNS = {
     "Multiply": "MULT Execution (ms)",
     "Stencil": "Stencil Execution (ms)",
 }
+FLOPS_PER_ELEMENT = {"SAXPY": 2, "Multiply": 1, "Stencil": 5}
 IMPLEMENTATIONS = ("serial", "autovectorized", "avx512")
 COLORS = {"serial": "#555555", "autovectorized": "#2878b5", "avx512": "#e87522"}
 
@@ -211,6 +212,33 @@ def working_set_plots(rows, output_dir):
     axes[-1].set_xlabel("Working-set length (elements)")
     fig.suptitle("Achieved element throughput", fontsize=14)
     save(fig, output_dir, "working_set_throughput.png")
+
+    # Estimate floating-point throughput from the documented operation count
+    # for each kernel and the measured execution time.
+    fig, axes = plt.subplots(len(TIME_COLUMNS), 1, figsize=(9, 14), sharex=True)
+    for ax, kernel in zip(axes, TIME_COLUMNS):
+        for impl in IMPLEMENTATIONS:
+            xs, rates, rate_stds = [], [], []
+            for length, stride, offset, datatype in configurations:
+                config = {"length": length, "stride": stride, "offset": offset, "datatype": datatype}
+                key = tuple(config[name] for name in ("length", "stride", "offset", "datatype")) + (impl,)
+                data = summary.get(key)
+                if data:
+                    xs.append(length)
+                    samples = [FLOPS_PER_ELEMENT[kernel] * length / (time_ms / 1000.0) / 1e9
+                               for time_ms in data[f"{kernel}_samples"] if time_ms > 0]
+                    rates.append(statistics.median(samples))
+                    rate_stds.append(statistics.stdev(samples) if len(samples) > 1 else 0.0)
+            if xs:
+                plot_with_std(ax, xs, rates, rate_stds, impl)
+        ax.set_xscale("log", base=2)
+        ax.set_ylabel("GFLOP/s")
+        ax.set_title(f"{kernel}")
+        ax.grid(True, which="both", alpha=0.25)
+        ax.legend()
+    axes[-1].set_xlabel("Working-set length (elements)")
+    fig.suptitle("Estimated floating-point performance", fontsize=14)
+    save(fig, output_dir, "working_set_roofline.png")
 
 
 def sweep_plot(rows, output_dir, dimension, select, title, xlabel, filename,
