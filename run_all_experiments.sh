@@ -17,6 +17,7 @@ run_config() {
     local i p
     for ((i = 0; i < REPS; i++)); do
         for p in "${!PROGS[@]}"; do
+						# echo "$p: $bytes, $len, $off, $stride"
             nice -n -20 taskset -c "$CORE" "./build/experiments/${PROGS[$p]}" \
                 "./data/inputs/a_${dt}.floatdata" \
                 "./data/inputs/x_${dt}.floatdata" \
