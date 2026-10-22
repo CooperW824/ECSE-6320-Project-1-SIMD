@@ -92,7 +92,7 @@
 
 % ---------- Title Info ----------
 \title{\textbf{ECSE-6320 Advanced Computer Systems \\ Project 1 Report}}
-\author{Cooper Werner \\\small Rensselaer Polytechnic Institute \\ \small wernec6@rpi.edu \\ \small RIN: 662058426}
+\author{Cooper Werner \\\small Rensselaer Polytechnic Institute \\ \small wernec6@rpi.edu}
 \date{\today}
 
 \begin{document}
@@ -401,7 +401,7 @@ are sufficient to prove correctness of the kernel.
 	// Precondition: Type T is either a float or double
 	KERNEL_INLINE void saxpy_impl_##SUFFIX(const T *restrict a,
 	const T *restrict x, T *restrict y,
-	size_t len, size_t stride) 																							{
+	size_t len, size_t stride) 																								{
 
 			for (size_t i = 0; i < len; i++) // Loop Terminates since len is a finite integer
 
@@ -622,11 +622,12 @@ experimental design and troubleshooting anomalies in the data.
 	\item Updated my implementation to best utilize compiler optimizations: \\
 	      https://claude.ai/share/0ca2f2f2-e344-4c1b-9144-afdf8a9730e5
 	\item Helped me troubleshoot a roofline plot that didn't make sense: \\
-				https://claude.ai/share/49f7c338-1eb1-4fae-9c43-98317c09c256
+	      https://claude.ai/share/49f7c338-1eb1-4fae-9c43-98317c09c256
 \end{enumerate}
 
-I also made extensive use of OpenCode (an open source coding agent) to develop scripts, experiment code, and plotting code. I reveiewed all output
-for correctness and accuracy. Making minor fixes where applicable. Transcripts for the OpenCode sessions are available in \texttt{./OpenCode}
+I also made extensive use of OpenCode (an open source coding agent) to develop scripts, experiment code, and plotting
+code. I reveiewed all output for correctness and accuracy. Making minor fixes where applicable. Transcripts for the
+OpenCode sessions are available in \texttt{./OpenCode}
 
 \section{Additional Data / Raw Logs}
 
