@@ -5,6 +5,10 @@
 *.toc
 *.fdb_latexmk
 *.log
+*.xml
+*.bbl
+*.bcf
+*.blg
 
 *.floatdata
 build/

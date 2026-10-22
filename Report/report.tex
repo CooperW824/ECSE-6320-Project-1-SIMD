@@ -25,6 +25,8 @@
 \usepackage{listings}
 \usepackage{xcolor}
 
+\usepackage{cite} 
+
 \definecolor{codebg}{RGB}{245,245,245}
 \definecolor{codegray}{RGB}{110,110,110}
 \definecolor{codeblue}{RGB}{0,80,180}
@@ -90,19 +92,18 @@
   fonttitle=\bfseries, breakable
 }
 
+
+
+
 % ---------- Title Info ----------
 \title{\textbf{ECSE-6320 Advanced Computer Systems \\ Project 1 Report}}
 \author{Cooper Werner \\\small Rensselaer Polytechnic Institute \\ \small wernec6@rpi.edu}
 \date{\today}
+    % Points to your references.bib file
 
 \begin{document}
 
 \maketitle
-
-\begin{abstract}
-	% One-paragraph summary: what was tested, what was expected, what was found.
-
-\end{abstract}
 
 \tableofcontents
 \newpage
@@ -401,7 +402,7 @@ are sufficient to prove correctness of the kernel.
 	// Precondition: Type T is either a float or double
 	KERNEL_INLINE void saxpy_impl_##SUFFIX(const T *restrict a,
 	const T *restrict x, T *restrict y,
-	size_t len, size_t stride) 																								{
+	size_t len, size_t stride) 																													{
 
 			for (size_t i = 0; i < len; i++) // Loop Terminates since len is a finite integer
 
@@ -550,7 +551,7 @@ each run. Then the median execution time is reported and used in the plots and c
 	\textbf{Root cause (if known):} \\
 	In my handwritten AVX512 implementation, I use `VGATHER' and `VSCATTER' which can each take upto 13 or 17 cycles resepectively. Whereas the alligned load
 	only takes 1 cycle and the Fused-Multiply-Add operation also only takes 1 cycle. Gathering and scattering data across strided regions of memory ends up
-	taking most the execution time.
+	taking most the execution time. \cite{Fog2025Introduction}
 
 \end{failurebox}
 
@@ -633,5 +634,8 @@ OpenCode sessions are available in \texttt{./OpenCode}
 
 Full disasemblies can be found in \texttt{./disassembly/}. The full CSV data can be found in
 `\texttt{./results/data.csv}'. Plotting code can be found in \texttt{./analysis}.
+
+\bibliographystyle{IEEEtran}     % Sets the style to IEEE
+\bibliography{references}
 
 \end{document}
