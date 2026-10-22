@@ -308,7 +308,7 @@ def plot_roofline(rows: list[dict[str, object]]) -> None:
     axis.set_ylabel("Performance (GFLOP/s)")
     axis.set_title("Roofline: performance vs. arithmetic intensity (float)")
     axis.grid(True, which="both", alpha=0.25)
-    axis.legend(fontsize="small", ncol=2)
+    axis.legend(fontsize="small", ncol=2, loc="lower right")
     fig.tight_layout()
     fig.savefig(OUTPUT_DIR / "roofline.png", dpi=180)
     plt.close(fig)

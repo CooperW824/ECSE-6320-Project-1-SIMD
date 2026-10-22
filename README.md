@@ -2,16 +2,16 @@
 
 Analyzing the performance speedup from introducing SIMD instructions into vector-operations.
 
-## AI Usage Transparency Note
+## Computer Target:
 
-I used the free version of Claude (model: Sonnet 5) to help generate secondary utilities for this project. The primary parts of this project, the kernels, build system and performance analysis infrastructure was written by me. A full list of uses is below.
+This code was written targeting Linux 7.0.11, running on an x86_64 AMD Ryzen 7 350 processor. Running this code on
+a different computer may result in the code either not compiling, not running, or crashing during execution. 
 
-1. Generated LaTeX template for the report: https://claude.ai/share/2757c2c9-0ce7-42d1-8546-33ad7abf8f7a
-2. Generated the code for the random float data generator `./src/data-gen/main.c`: https://claude.ai/share/68a2ba0a-4a17-439e-b7ba-caf666aabab9
-3. Generated the verifier for verifying that two data outputs are the same `./src/verifier/main.c`:  https://claude.ai/share/68a2ba0a-4a17-439e-b7ba-caf666aabab9
-4. Helped me with understanding the different features of the AVX instruction set: https://claude.ai/share/d8f4d5b0-6c86-444e-be84-7cd45c2d1c63
-5. Helped me review my kernel implementations: https://claude.ai/share/2e4bc6ff-4500-42c9-a0de-b693232d2634
-6. Updated my implementation to best utilize compiler optimizations: https://claude.ai/share/0ca2f2f2-e344-4c1b-9144-afdf8a9730e5
+## Results, Analysis, and Conclusions:
+
+All of my methodologies, results, analysis, and conclusions can be found in:
+
+		./report/report.pdf
 
 ## Compilation:
 
@@ -28,9 +28,13 @@ This will generate the following executables:
 
 ## Usage:
 
+### Data Generation
 First you must generate the data for the experiments, this is done using the datagen:
 
 	./build/datagen <num_elements> <path/to/output/directory>
+
+
+### Experiment Single Shot
 
 Then you can run the experiment(s), each experiment takes the following command line argument values:
 
@@ -48,9 +52,21 @@ Then you can run the experiment(s), each experiment takes the following command 
 
 		./build/experiments/* <path/to/data/a_file.floatdata> <path/to/data/x_file.floatdata> <path/to/data/y_file.floatdata> <path/to/output/folder> <data width: (4 | 8)> <number of elements> <stencil a> <stencil b> <stencil c> [data offset: default: 0] [stride width: default: 1]
 
+### Result Verification Between Serial and AVX512
+
 Lastly, to verify the correctness of the output, you can compare the AVX512 implementation to the serial implementation using the verifier tool:
 
 		./build/verifier <path/to/serially/computed/data> <path/to/vectorized/data> <element_size:4|8> <n_elements> [rel_epsilon]
 
-Relative epsilon is the error term for the verifier. This is optional, it is 1e-6 for floats and 1e-9 for doubles.
+Relative epsilon is the error term for the verifier. This is optional, the default is 1e-6 for floats and 1e-9 for doubles.
+
+### Running all experiments.
+
+To run all experiments:
+
+		chmod +x ./run_all_experiments.sh
+		sudo ./run_all_experiments.sh
+
+You don't necessarily have to run the script with `sudo`, running without `sudo` prevents the script from setting the niceness of the program which may 
+mean that programs get preempted out of execution during the experiment which may impact results.
 
